@@ -32,8 +32,8 @@ def wavelength_to_radius(PS , # particle size in micron
     return theta # deg
 
 def Monochromatic_Image(Lambda, PS, SourceFunction, Intensity):
-    Airy = AiryDisk2DKernel(wavelength_to_radius(PS, Lambda))
-    return convolve_fft(SourceFunction, Airy)*Intensity
+    Airy = AiryDisk2DKernel(wavelength_to_radius(PS, Lambda), x_size=500, y_size=500)
+    return convolve_fft(SourceFunction, Airy, boundary='wrap')*Intensity
 
 def Integrated_Image(wavelength, PS, SourceFunction, Spectrum):
     Arr = np.zeros(np.shape(SourceFunction))
@@ -51,14 +51,14 @@ def planck(wav, T):
     Spectrum = a/ ( (wav**5) * (np.exp(b) - 1.0) )
     return Spectrum
 
-
-
 def auto_adjust(img):
     Max = np.max(img)
     Min = np.min(img)
-    #img -= Min
     img = (img - np.ones(np.shape(img))*Min)/Max
     img = exposure.adjust_gamma(img, 1/5)
+    Max = np.max(img)
+    Min = np.min(img)
+    img = (img - np.ones(np.shape(img))*Min)/Max
     return img
 
 
@@ -72,39 +72,51 @@ def Sep_frame_mode(img):
         ax.axis("off")
     plt.show()
     
-def One_frame_mode(img, save=True):
+def One_frame_mode(img, save=True, filename="Corona.jpg"):
     fig, ax = plt.subplots(figsize=(6,6))
     ax.imshow(img)
     ax.axis("off")
     plt.subplots_adjust(0,0,1,1)
     #plt.tight_layout()
     if save:
-        plt.savefig("Corona.jpg", dpi=300)
+        plt.savefig(filename, dpi=300)
         print("Save!")
     else:
         plt.show()
     
-def main():
-    FOV = 15 # Degree
-    MoonSize = 0.5 # Degree
-    L = 501 # Pixels
-    cloud_size = 1 # micron
+def profile(img):
+    fig, ax = plt.subplots()
+    R = img[:,:,2]
+    G = img[:,:,1]
+    B = img[:,:,0]
+    i = int((np.shape(img)[0]-1)/2+1)
+    ax.semilogy(B[i,:], label='Blue', color='b')
+    ax.semilogy(G[i,:], label='Green', color='g')
+    ax.semilogy(R[i,:], label='Red', color='r')
+    plt.legend()
+    ax.set_ylabel("Brightness (log scale)")
+    ax.set_xlabel("x (pixel)")
+    plt.savefig("profile.jpg", dpi=300)
+
+
+def One_Sim(FOV=15, L=501, cloud_size=1, filename="Corona.jpg"):
     img = np.zeros((L,L,3))
     SourceFunction = Create_Source('Moon', FOV, L)
     # https://en.wikipedia.org/wiki/Spectral_sensitivity#/media/File:Cones_SMJ2_E.svg
-    wave_B = np.linspace(420, 475, 10)
-    wave_G = np.linspace(510, 590, 10)
-    wave_R = np.linspace(620, 700, 10)
+    wave_B = np.linspace(357.2, 513.4, 10)
+    wave_G = np.linspace(448.6, 646.8, 10)
+    wave_R = np.linspace(528.3, 741.5, 10)
     B = Integrated_Image(wave_B, cloud_size, SourceFunction, planck(wave_B, 5500))
     G = Integrated_Image(wave_G, cloud_size, SourceFunction, planck(wave_G, 5500))
     R = Integrated_Image(wave_R, cloud_size, SourceFunction, planck(wave_R, 5500))
     img[:,:,0] = B
     img[:,:,1] = G
     img[:,:,2] = R
-    img = auto_adjust(img)
-    #plt.hist(img.ravel())
-    #plt.show()
-    One_frame_mode(img)
+    #img = auto_adjust(img)
+    #One_frame_mode(img, True, filename)
+    profile(img)
 
 if __name__ == '__main__':
-    main()
+    One_Sim()
+    #One_Sim(cloud_size=1.5, filename="Corona_2.jpg")
+    #One_Sim(cloud_size=2,   filename="Corona_3.jpg")
