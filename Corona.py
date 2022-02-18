@@ -102,6 +102,8 @@ def profile(img):
     ax.semilogy(B[i,:], label='Blue', color='b')
     ax.semilogy(G[i,:], label='Green', color='g')
     ax.semilogy(R[i,:], label='Red', color='r')
+    ax.set_xticks([])
+    ax.set_yticks([])
     plt.legend()
     ax.set_ylabel("Brightness (log scale)")
     ax.set_xlabel("x (pixel)")
