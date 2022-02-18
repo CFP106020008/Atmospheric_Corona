@@ -52,6 +52,13 @@ def planck(wav, T):
     return Spectrum
 
 def auto_adjust(img):
+    # White balance
+    B0 = img[0,:,0]
+    G0 = img[0,:,1]
+    R0 = img[0,:,2]
+    img[:,:,0] *= R0/B0
+    img[:,:,1] *= R0/G0
+    # Stretch
     Max = np.max(img)
     Min = np.min(img)
     img = (img - np.ones(np.shape(img))*Min)/Max
@@ -89,6 +96,8 @@ def profile(img):
     R = img[:,:,2]
     G = img[:,:,1]
     B = img[:,:,0]
+    G *= R[0]/G[0]
+    B *= R[0]/B[0]
     i = int((np.shape(img)[0]-1)/2+1)
     ax.semilogy(B[i,:], label='Blue', color='b')
     ax.semilogy(G[i,:], label='Green', color='g')
@@ -103,18 +112,18 @@ def One_Sim(FOV=15, L=501, cloud_size=1, filename="Corona.jpg"):
     img = np.zeros((L,L,3))
     SourceFunction = Create_Source('Moon', FOV, L)
     # https://en.wikipedia.org/wiki/Spectral_sensitivity#/media/File:Cones_SMJ2_E.svg
-    wave_B = np.linspace(357.2, 513.4, 10)
-    wave_G = np.linspace(448.6, 646.8, 10)
-    wave_R = np.linspace(528.3, 741.5, 10)
+    wave_B = np.linspace(380.0, 510.0, 10)
+    wave_G = np.linspace(510.0, 575.0, 20)
+    wave_R = np.linspace(575.0, 700.0, 20)
     B = Integrated_Image(wave_B, cloud_size, SourceFunction, planck(wave_B, 5500))
     G = Integrated_Image(wave_G, cloud_size, SourceFunction, planck(wave_G, 5500))
     R = Integrated_Image(wave_R, cloud_size, SourceFunction, planck(wave_R, 5500))
     img[:,:,0] = B
     img[:,:,1] = G
     img[:,:,2] = R
-    #img = auto_adjust(img)
-    #One_frame_mode(img, True, filename)
     profile(img)
+    img = auto_adjust(img)
+    One_frame_mode(img, True, filename)
 
 if __name__ == '__main__':
     One_Sim()
